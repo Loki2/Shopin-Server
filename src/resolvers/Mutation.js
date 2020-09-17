@@ -80,10 +80,7 @@ const Mutation =  {
       const {id} = args
        //Find User Who preformed added To cart-- Full logical is userId from login
        if(!userId) throw new Error('Plz, Login to process')
-
-       console.log('user-->', userId)
         try {
-          
           //Check if the new addToCart items is already user.carts
           const user = await UserModel.findById(userId).populate({
             path: 'carts', 
