@@ -75,54 +75,55 @@ const Mutation =  {
     },
     //****************************Cart Items*********************************** */
     //Add To Cart Mutation
-    addToCart: async (parent, args, {userId}, info) => {
+    addToCart: async (parent, args, { userId }, info) => {
       //id ---> ProductId
       const {id} = args
+       //Find User Who preformed added To cart-- Full logical is userId from login
+       if(!userId) throw new Error('Plz, Login to process')
 
-      try {
-        //Find User Who preformed added To cart-- Full logical is userId from login
-        if(!userId) throw new Error('Plz, Login to process')
+       console.log('user-->', userId)
+        try {
+          
+          //Check if the new addToCart items is already user.carts
+          const user = await UserModel.findById(userId).populate({
+            path: 'carts', 
+            populate: {path: 'product'}
+          });
 
-        //Check if the new addToCart items is already user.carts
-        const user = await UserModel.findById(userId).populate({
-          path: 'carts', 
-          populate: {path: 'product'}
-        });
+          const findCartItemIndex = user.carts.findIndex(cartItem => cartItem.product.id === id);
 
-        const findCartItemIndex = user.carts.findIndex(cartItem => cartItem.product.id === id);
-
-        if(findCartItemIndex > -1){
-           //A. the new addToCart item is already Exist is Carts
-          //A.1 Find the itemCart from databade /Update
-          const CartList = user.carts[findCartItemIndex].qualtity += 1;
-          await Cart.findByIdAndUpdate(user.carts[findCartItemIndex].id, {
-            qualtity: CartList
-          }) //Get From Cart Item ID from index
+          if(findCartItemIndex > -1){
+            //A. the new addToCart item is already Exist is Carts
+            //A.1 Find the itemCart from databade /Update
+            const CartList = user.carts[findCartItemIndex].qualtity += 1;
+            await Cart.findByIdAndUpdate(user.carts[findCartItemIndex].id, {
+              qualtity: CartList
+            }) //Get From Cart Item ID from index
 
 
-          //A.2 Find Updated cartItem
-          const updateCartItem = await Cart.findById(user.carts[findCartItemIndex].id)
+            //A.2 Find Updated cartItem
+            const updateCartItem = await Cart.findById(user.carts[findCartItemIndex].id)
+                .populate({path: 'product'})
+                .populate({path: 'user'})
+
+            return updateCartItem;
+          } else {
+            //B. the new addToCart is not in Cart yet
+            const cartItem = await Cart.create({
+              product: id,
+              qualtity: 1,
+              user: userId
+            })
+            //B.1 Create new cart
+            const newCartItem = await Cart.findById(cartItem.id)
               .populate({path: 'product'})
               .populate({path: 'user'})
-
-          return updateCartItem;
-        } else {
-          //B. the new addToCart is not in Cart yet
-          const cartItem = await Cart.create({
-            product: id,
-            qualtity: 1,
-            user: userId
-          })
-          //B.1 Create new cart
-          const newCartItem = await Cart.findById(cartItem.id)
-            .populate({path: 'product'})
-            .populate({path: 'user'})
-          //B.2 Update user.cart
-          await UserModel.findByIdAndUpdate(userId, {carts: [...user.carts, newCartItem]})
-          return newCartItem;
-        }        
-      } catch (error) {
-        console.log(error)
+            //B.2 Update user.cart
+            await UserModel.findByIdAndUpdate(userId, {carts: [...user.carts, newCartItem]})
+            return newCartItem;
+          }        
+        } catch (error) {
+          console.log(error)
       }
     },
 
